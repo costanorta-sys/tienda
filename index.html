@@ -353,7 +353,7 @@
         }
         .whatsapp-input:focus { outline: none; border-color: var(--success); }
 
-        /* BOTÓN WHATSAPP DENTRO DEL CARRITO (SIN STICKY, AL FINAL) */
+        /* BOTÓN WHATSAPP DENTRO DEL CARRITO */
         .btn-whatsapp-full {
             width: 100%;
             padding: 18px 24px;
@@ -376,7 +376,7 @@
         }
         .btn-whatsapp-full:active { transform: scale(0.97); }
 
-        /* BOTÓN FLOTANTE DE WHATSAPP PARA ACCESO RÁPIDO (SOLO CUANDO HAY PRODUCTOS) */
+        /* BOTÓN FLOTANTE DE WHATSAPP PARA ACCESO RÁPIDO */
         .fab-whatsapp {
             position: fixed;
             bottom: 20px;
@@ -493,7 +493,7 @@
         </div>
     </div>
 
-    <!-- VISTA ADMIN (completa) -->
+    <!-- VISTA ADMIN -->
     <div class="admin-view" id="adminView">
         <nav class="navbar">
             <div class="nav-container">
@@ -583,14 +583,13 @@
         </div>
     </div>
 
-    <!-- ================= VISTA CLIENTE ================= -->
+    <!-- VISTA CLIENTE -->
     <div class="client-view" id="clientView">
         <nav class="navbar">
             <div class="nav-container">
                 <div class="nav-brand" id="clientStoreName"><i class="fas fa-rocket"></i> FUTURESHOP</div>
                 <div class="nav-right">
                     <button class="theme-toggle" onclick="toggleTheme()"><i class="fas fa-moon" id="clientThemeIcon"></i></button>
-                    <!-- Botón del carrito siempre visible -->
                     <button class="cart-icon-btn" onclick="toggleCart()">
                         <i class="fas fa-shopping-cart"></i>
                         <span class="cart-count" id="cartCountDesktop">0</span>
@@ -638,14 +637,13 @@
             <p class="footer-text" style="font-size: 0.8rem;"><i class="fab fa-zelle"></i> También realizamos envíos de dinero vía Zelle – ¡Contáctanos!</p>
         </footer>
 
-        <!-- Botón flotante de WhatsApp (solo visible cuando hay productos en el carrito) -->
         <div class="fab-whatsapp" id="floatingWhatsappBtn" style="display: none;" onclick="toggleCart()">
             <i class="fab fa-whatsapp"></i>
             <span class="fab-whatsapp-count" id="fabWhatsappCount">0</span>
         </div>
     </div>
 
-    <!-- CARRITO (SIDEBAR) -->
+    <!-- CARRITO -->
     <div class="cart-overlay" id="cartOverlay" onclick="toggleCart()"></div>
     <div class="cart-sidebar" id="cartSidebar">
         <div class="cart-header"><h3><i class="fas fa-shopping-cart"></i> Tu Carrito</h3><button class="modal-close" onclick="toggleCart()"><i class="fas fa-times"></i></button></div>
@@ -661,7 +659,7 @@
         </div>
     </div>
 
-    <!-- ================= MODAL DE PRODUCTOS (COMPLETO) ================= -->
+    <!-- MODAL DE PRODUCTOS -->
     <div class="modal-overlay" id="productModal" onclick="if(event.target === this) closeProductModal()">
         <div class="modal">
             <div class="modal-header"><h3 id="modalTitle"><i class="fas fa-plus"></i> Nuevo Producto</h3><button class="modal-close" onclick="closeProductModal()"><i class="fas fa-times"></i></button></div>
@@ -741,7 +739,6 @@
             window.open(`https://wa.me/${whatsappNumber}?text=${encodeURIComponent(mensaje)}`, '_blank');
         }
 
-        // ========== FUNCIONES BASE ==========
         function getData() {
             try {
                 const saved = localStorage.getItem(DB_KEY);
@@ -815,7 +812,6 @@
             document.querySelectorAll('#themeIcon, #clientThemeIcon').forEach(i => i.className = isLight ? 'fas fa-sun' : 'fas fa-moon');
         }
 
-        // ========== VISTAS ADMIN ==========
         function showAdminView() {
             document.getElementById('authContainer').classList.add('hidden');
             document.getElementById('clientView').style.display = 'none';
@@ -868,7 +864,6 @@
         function toggleMobileNav() { document.getElementById('mobileNavOverlay').classList.toggle('active'); document.getElementById('mobileNavDrawer').classList.toggle('active'); }
         function toggleClientMobileNav() { document.getElementById('clientMobileNavOverlay').classList.toggle('active'); document.getElementById('clientMobileNavDrawer').classList.toggle('active'); }
 
-        // ========== CATEGORÍAS ==========
         function getUniqueCategories() {
             const data = getData();
             const cats = new Set();
@@ -1035,10 +1030,8 @@
             const floatingBtn = document.getElementById('floatingWhatsappBtn');
             const data = getData();
             const totalItems = cart.reduce((s,i)=>s+i.quantity,0);
-            // Actualizar contadores
             document.getElementById('cartCountDesktop').textContent = totalItems;
             document.getElementById('cartCountMobile').textContent = totalItems;
-            // Controlar visibilidad del botón flotante de WhatsApp
             if (cart.length > 0) {
                 floatingBtn.style.display = 'flex';
                 document.getElementById('fabWhatsappCount').textContent = totalItems;
@@ -1063,6 +1056,7 @@
         function removeFromCart(id) { cart = cart.filter(i=>i.id!==id); updateCart(); }
         function toggleCart() { document.getElementById('cartSidebar').classList.toggle('active'); document.getElementById('cartOverlay').classList.toggle('active'); }
 
+        // ========== ENVÍO DE PEDIDO CON CÓDIGO DESTACADO (FÁCIL DE COPIAR) ==========
         function sendWhatsAppOrder() {
             if(!cart.length) { showToast('warning','Vacío','Agrega productos'); return; }
             const nombre = document.getElementById('customerName').value.trim();
@@ -1078,7 +1072,10 @@
             const pedidos = JSON.parse(localStorage.getItem(PEDIDOS_KEY) || '[]');
             pedidos.push({ id:pedidoId, cliente:nombre, telefono:telefono, direccion:direccion, productos:cart.map(i=>({ nombre:i.name, cantidad:i.quantity, precio:i.price, subtotal:i.price*i.quantity })), total:total, moneda:data.settings.currencySymbol, fecha:new Date().toISOString() });
             localStorage.setItem(PEDIDOS_KEY, JSON.stringify(pedidos));
-            let msg = `🛍️ *NUEVO PEDIDO - ${data.settings.storeName}*\n\n📋 *CÓDIGO DE PEDIDO:* ${pedidoId}\n👤 *Cliente:* ${nombre}\n📞 *Teléfono:* ${telefono}\n📍 *Dirección:* ${direccion}\n\n✅ Verifica este código en nuestro sistema.\n🔒 No se aceptan modificaciones manuales.\n\n💡 ¿Necesitas enviar dinero? También realizamos remesas seguras vía Zelle. ¡Contáctanos!`;
+            
+            // MENSAJE MEJORADO - CÓDIGO DESTACADO PARA COPIAR FÁCIL
+            let msg = `🔐 *CÓDIGO DE VERIFICACIÓN:*\n━━━━━━━━━━━━━━━━━━\n*${pedidoId}*\n━━━━━━━━━━━━━━━━━━\n\n🛍️ *NUEVO PEDIDO - ${data.settings.storeName}*\n━━━━━━━━━━━━━━━━━━\n👤 *Cliente:* ${nombre}\n📞 *Teléfono:* ${telefono}\n📍 *Dirección:* ${direccion}\n━━━━━━━━━━━━━━━━━━\n\n✅ *Instrucciones:*\n1️⃣ Copia el código de arriba\n2️⃣ Envíalo al vendedor por este mismo chat\n3️⃣ El vendedor verificará tu pedido\n\n🔒 *No se aceptan modificaciones manuales del pedido.*\n\n💡 ¿Necesitas enviar dinero? También realizamos remesas seguras vía Zelle. ¡Contáctanos!`;
+            
             cart = []; updateCart(); toggleCart();
             window.open(`https://wa.me/${data.settings.whatsappNumber}?text=${encodeURIComponent(msg)}`, '_blank');
             document.getElementById('customerName').value = ''; document.getElementById('customerAddress').value = ''; document.getElementById('customerPhone').value = '';
