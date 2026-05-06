@@ -542,7 +542,6 @@
                         <button class="quick-action-btn primary" onclick="openProductModal()"><i class="fas fa-plus-circle"></i><span>Nuevo Producto</span></button>
                         <button class="quick-action-btn success" onclick="viewStore()"><i class="fas fa-store"></i><span>Ver Tienda</span></button>
                         <button class="quick-action-btn export" onclick="exportToGitHub()"><i class="fab fa-github"></i><span>Exportar a GitHub</span></button>
-                        <!-- Botón para forzar recarga desde GitHub -->
                         <button class="quick-action-btn" onclick="forceReloadFromGitHub()" style="background: linear-gradient(135deg, rgba(255,170,0,0.1), rgba(204,136,0,0.1)); border-color: var(--warning);">
                             <i class="fas fa-sync-alt"></i><span>Recargar Datos</span>
                         </button>
@@ -613,7 +612,6 @@
                 <a href="#" class="mobile-nav-link" onclick="scrollToSection('productos'); toggleClientMobileNav(); return false;"><i class="fas fa-box-open"></i> Productos</a>
                 <a href="#" class="mobile-nav-link" onclick="openZelleRemittance(); toggleClientMobileNav(); return false;"><i class="fab fa-zelle"></i> Remesas Zelle</a>
                 <a href="#" class="mobile-nav-link" onclick="toggleCart(); toggleClientMobileNav(); return false;"><i class="fas fa-shopping-cart"></i> Mi Carrito<span id="cartCountMobile" style="margin-left: auto; background: var(--accent); color: white; font-size: 0.7rem; padding: 2px 8px; border-radius: 10px;">0</span></a>
-                <!-- Botón para forzar recarga en vista cliente -->
                 <a href="#" class="mobile-nav-link" onclick="forceReloadFromGitHub(); toggleClientMobileNav(); return false;" style="border-color: var(--warning); color: var(--warning);">
                     <i class="fas fa-sync-alt"></i> Actualizar Catálogo
                 </a>
@@ -744,14 +742,8 @@
         let currentFilter = 'all';
 
         const defaultData = {
-            products: [
-                { id: 1, name: "🎁 Combo Familiar", category: "combos", type: "combo", price: 89.99, emoji: "🎁", image: "", imageType: "emoji", description: "El paquete ideal para toda la familia", items: ["Producto A", "Producto B", "Producto C"], active: true, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
-                { id: 2, name: "📺 Licuadora Pro 2000W", category: "electrodomesticos", type: "unitario", price: 149.99, emoji: "📺", image: "", imageType: "emoji", description: "Licuadora de alta potencia", items: [], active: true, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
-                { id: 3, name: "⌚ Smartwatch Deportivo", category: "accesorios", type: "unitario", price: 79.99, emoji: "⌚", image: "", imageType: "emoji", description: "Monitorea tu actividad física", items: [], active: true, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
-                { id: 4, name: "🧼 Kit de Limpieza", category: "aseo", type: "unitario", price: 45.99, emoji: "🧼", image: "", imageType: "emoji", description: "Productos ecológicos", items: [], active: true, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
-                { id: 5, name: "📦 Caja Sorpresa", category: "otros", type: "unitario", price: 29.99, emoji: "📦", image: "", imageType: "emoji", description: "Sorpresa garantizada", items: [], active: true, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() }
-            ],
-            settings: { whatsappNumber: "5491112345678", storeName: "FutureShop", currencySymbol: "$" }
+            products: [],
+            settings: { whatsappNumber: "", storeName: "FutureShop", currencySymbol: "$" }
         };
 
         function openZelleRemittance() {
@@ -770,6 +762,7 @@
                 }
                 return defaultData;
             } catch(e) {
+                console.error('Error parsing localStorage:', e);
                 return defaultData;
             }
         }
@@ -780,6 +773,7 @@
                 showToast('success','Guardado','Cambios guardados localmente');
                 return true;
             } catch(e) {
+                console.error('Error saving to localStorage:', e);
                 showToast('error','Error','No se pudo guardar');
                 return false;
             }
@@ -799,42 +793,113 @@
 
         // ========== FUNCIÓN PRINCIPAL: CARGAR DESDE GITHUB ==========
         async function loadDataFromGitHub(showToastMsg = true) {
+            console.log('🔄 Intentando cargar desde:', GITHUB_DATA_URL);
+            
             try {
                 // Agregar timestamp para evitar caché
                 const url = `${GITHUB_DATA_URL}?t=${Date.now()}`;
-                const response = await fetch(url, { cache: 'no-cache' });
+                const response = await fetch(url, { 
+                    cache: 'no-cache',
+                    headers: { 'Accept': 'application/json' }
+                });
+                
+                console.log('📡 Respuesta:', response.status, response.statusText);
                 
                 if (response.ok) {
                     const data = await response.json();
-                    // Validar que tenga la estructura esperada
+                    console.log('📦 Datos recibidos:', data);
+                    
+                    // Validar estructura
                     if (data.products && Array.isArray(data.products) && data.settings) {
                         localStorage.setItem(DB_KEY, JSON.stringify(data));
                         if (showToastMsg) {
-                            showToast('success','✅ Actualizado','Catálogo sincronizado desde GitHub');
+                            showToast('success','✅ Actualizado',`Cargados ${data.products.length} productos desde GitHub`);
                         }
-                        console.log('✅ Datos cargados desde GitHub:', data.products.length, 'productos');
                         return true;
+                    } else {
+                        console.error('❌ Estructura inválida:', data);
+                        if (showToastMsg) {
+                            showToast('error','❌ Error','El archivo data.json tiene formato incorrecto');
+                        }
+                        return false;
                     }
+                } else if (response.status === 404) {
+                    console.error('❌ 404 - Archivo no encontrado');
+                    if (showToastMsg) {
+                        showToast('error','❌ 404','data.json no encontrado. Verifica: rama, ruta y que el repo sea público');
+                    }
+                    return false;
+                } else if (response.status === 403) {
+                    console.error('❌ 403 - Acceso denegado');
+                    if (showToastMsg) {
+                        showToast('error','❌ 403','Acceso denegado. ¿El repositorio es privado?');
+                    }
+                    return false;
+                } else {
+                    console.error('❌ Error HTTP:', response.status);
+                    return false;
                 }
-                if (showToastMsg) {
-                    showToast('warning','⚠️ Sin conexión','Usando datos locales');
-                }
-                return false;
             } catch(e) {
-                console.warn('❌ Error cargando desde GitHub:', e);
+                console.error('❌ Excepción cargando desde GitHub:', e);
                 if (showToastMsg) {
-                    showToast('warning','⚠️ Error','No se pudo conectar con GitHub');
+                    showToast('warning','⚠️ Sin conexión','Usando datos locales. Verifica tu internet.');
                 }
                 return false;
             }
         }
 
-        // ========== FUNCIÓN PARA FORZAR RECARGA MANUAL ==========
+        // ========== FUNCIÓN PARA PROBAR LA CONEXIÓN MANUALMENTE ==========
+        async function testGitHubConnection() {
+            console.log('🔍 Probando conexión con GitHub...');
+            console.log('URL:', GITHUB_DATA_URL);
+            
+            try {
+                const response = await fetch(GITHUB_DATA_URL + '?t=' + Date.now());
+                console.log('✅ Estado:', response.status, response.statusText);
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    console.log('✅ Productos:', data.products?.length || 0);
+                    console.log('✅ Configuración:', data.settings);
+                    showToast('success','✅ Conexión OK','GitHub accesible. Revisa la consola para detalles.');
+                } else {
+                    console.log('❌ Respuesta:', await response.text());
+                    showToast('error','❌ Error HTTP',`Código: ${response.status}`);
+                }
+            } catch(e) {
+                console.error('❌ Error de red:', e);
+                showToast('error','❌ Error de red','No se pudo conectar. Revisa consola (F12).');
+            }
+        }
+
+        // ========== FUNCIÓN PARA FORZAR RECARGA ==========
         async function forceReloadFromGitHub() {
             showToast('info','🔄 Sincronizando','Cargando datos desde GitHub...');
-            const success = await loadDataFromGitHub(false);
+            
+            // Intentar con rama principal
+            let success = await loadDataFromGitHub(false);
+            
+            // Si falla y estamos en 'main', intentar con 'master'
+            if (!success && GITHUB_BRANCH === 'main') {
+                console.log('🔄 Intentando con rama "master"...');
+                const fallbackUrl = `https://cdn.jsdelivr.net/gh/${REPO_OWNER}/${REPO_NAME}@master/${DATA_FILE}?t=${Date.now()}`;
+                try {
+                    const response = await fetch(fallbackUrl);
+                    if (response.ok) {
+                        const data = await response.json();
+                        if (data.products && Array.isArray(data.products) && data.settings) {
+                            localStorage.setItem(DB_KEY, JSON.stringify(data));
+                            showToast('success','✅ Actualizado','Cargado desde rama "master"');
+                            success = true;
+                        }
+                    }
+                } catch(e) {
+                    console.log('❌ Fallback master también falló');
+                }
+            }
+            
             if (success) {
-                // Actualizar vistas si están visibles
+                // Actualizar vistas
                 if (document.getElementById('adminView').classList.contains('visible')) {
                     updateDashboard();
                     renderProductsTable();
@@ -847,7 +912,7 @@
                 }
                 showToast('success','✅ Listo','Catálogo actualizado');
             } else {
-                showToast('error','❌ Error','No se pudo cargar desde GitHub. Verifica tu conexión.');
+                showToast('error','❌ Error','No se pudo cargar desde GitHub. Verifica: 1) Repo público 2) data.json en raíz 3) Rama correcta');
             }
         }
 
@@ -995,7 +1060,8 @@
                     document.getElementById('productDescription').value = p.description || '';
                     document.getElementById('productActive').checked = p.active;
                     if(p.image && p.imageType==='base64') {
-                        currentImageData = { data:p.image, name:'img.jpg', size:0, type:'base64' };
+                        // ✅ CORREGIDO: Agregada la clave 'data:'
+                        currentImageData = { data: p.image, name:'img.jpg', size:0, type:'base64' };
                         document.getElementById('imagePreview').src = p.image;
                         document.getElementById('imagePreviewContainer').classList.add('visible');
                         document.getElementById('imageUploadContainer').style.display = 'none';
@@ -1057,7 +1123,16 @@
             if(!f.type.startsWith('image/')) { showToast('error','Error','Solo imágenes'); return; }
             if(f.size>2*1024*1024) { showToast('warning','Grande','Máx 2MB'); return; }
             const r = new FileReader();
-            r.onload = ev => { currentImageData = { data: ev.target.result, name: f.name, size: f.size, type:'base64' }; document.getElementById('imagePreview').src = ev.target.result; document.getElementById('imagePreviewContainer').classList.add('visible'); document.getElementById('imageUploadContainer').style.display = 'none'; const fileName = f.name.length>20 ? f.name.substring(0,20)+'...' : f.name; document.getElementById('imageFileName').textContent = fileName; document.getElementById('imageFileSize').textContent = (f.size/1024).toFixed(1)+' KB'; };
+            r.onload = ev => { 
+                // ✅ CORREGIDO: Agregada la clave 'data:'
+                currentImageData = { data: ev.target.result, name: f.name, size: f.size, type:'base64' }; 
+                document.getElementById('imagePreview').src = ev.target.result; 
+                document.getElementById('imagePreviewContainer').classList.add('visible'); 
+                document.getElementById('imageUploadContainer').style.display = 'none'; 
+                const fileName = f.name.length>20 ? f.name.substring(0,20)+'...' : f.name; 
+                document.getElementById('imageFileName').textContent = fileName; 
+                document.getElementById('imageFileSize').textContent = (f.size/1024).toFixed(1)+' KB'; 
+            };
             r.readAsDataURL(f);
         }
         function removeImage() { currentImageData = null; document.getElementById('imagePreviewContainer').classList.remove('visible'); document.getElementById('imageUploadContainer').style.display = 'block'; document.getElementById('productImageInput').value = ''; }
@@ -1163,33 +1238,59 @@
             showToast('info','Verificación','Usa el código en el panel admin.');
         }
 
+        // ========== INICIALIZACIÓN MEJORADA ==========
         async function init() {
-            console.log("🚀 Iniciando FutureShop...");
-            console.log("📦 Configuración GitHub:", { REPO_OWNER, REPO_NAME, DATA_FILE, GITHUB_BRANCH });
+            console.log("🚀 FutureShop v2.0 - Iniciando");
+            console.log("📦 Config GitHub:", { REPO_OWNER, REPO_NAME, DATA_FILE, GITHUB_BRANCH });
+            console.log("🔗 URL:", GITHUB_DATA_URL);
             
-            if(localStorage.getItem(THEME_KEY)==='light') { document.body.classList.add('light-mode'); updateThemeIcons(true); }
-            if(!localStorage.getItem(DB_KEY)) localStorage.setItem(DB_KEY, JSON.stringify(defaultData));
+            // Tema
+            if(localStorage.getItem(THEME_KEY)==='light') { 
+                document.body.classList.add('light-mode'); 
+                updateThemeIcons(true); 
+            }
             
-            // Intentar cargar desde GitHub al iniciar
+            // Datos por defecto si no hay nada
+            if(!localStorage.getItem(DB_KEY)) {
+                localStorage.setItem(DB_KEY, JSON.stringify(defaultData));
+                console.log('💾 Datos por defecto inicializados');
+            }
+            
+            // Intentar cargar desde GitHub PRIMERO y ESPERAR
+            console.log('🔄 Cargando desde GitHub...');
             await loadDataFromGitHub(false);
+            console.log('✅ Carga desde GitHub completada');
             
+            // Auth
             const auth = localStorage.getItem(AUTH_KEY);
             if(auth) { 
                 try { 
                     const user = JSON.parse(auth); 
                     if(user.type==='admin') showAdminView(); 
-                } catch(e){ localStorage.removeItem(AUTH_KEY); } 
+                } catch(e){ 
+                    console.error('Error parsing auth:', e);
+                    localStorage.removeItem(AUTH_KEY); 
+                } 
             }
             
+            // Renderizar DESPUÉS de cargar datos
+            console.log('🎨 Renderizando vista...');
             renderClientProducts(); 
             updateCart(); 
             renderCategoryFilters(); 
             updateCategoryDatalist();
+            console.log('✅ FutureShop listo');
             
-            if(window.location.hash === '#admin') document.getElementById('authContainer').classList.remove('hidden');
+            if(window.location.hash === '#admin') {
+                document.getElementById('authContainer').classList.remove('hidden');
+            }
         }
 
+        // ========== EVENT LISTENERS ==========
         document.addEventListener('DOMContentLoaded', () => {
+            console.log('📄 DOMContentLoaded');
+            
+            // Botón login admin
             const adminBtn = document.getElementById('btnAdminLogin');
             if(adminBtn) {
                 adminBtn.onclick = () => {
@@ -1206,7 +1307,15 @@
                     }
                 };
             }
+            
+            // Iniciar app
             init();
+            
+            // Exponer funciones para debugging en consola
+            window.testGitHubConnection = testGitHubConnection;
+            window.forceReloadFromGitHub = forceReloadFromGitHub;
+            window.loadDataFromGitHub = loadDataFromGitHub;
+            window.getData = getData;
         });
     </script>
 </body>
