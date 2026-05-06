@@ -542,6 +542,10 @@
                         <button class="quick-action-btn primary" onclick="openProductModal()"><i class="fas fa-plus-circle"></i><span>Nuevo Producto</span></button>
                         <button class="quick-action-btn success" onclick="viewStore()"><i class="fas fa-store"></i><span>Ver Tienda</span></button>
                         <button class="quick-action-btn export" onclick="exportToGitHub()"><i class="fab fa-github"></i><span>Exportar a GitHub</span></button>
+                        <!-- Botón para forzar recarga desde GitHub -->
+                        <button class="quick-action-btn" onclick="forceReloadFromGitHub()" style="background: linear-gradient(135deg, rgba(255,170,0,0.1), rgba(204,136,0,0.1)); border-color: var(--warning);">
+                            <i class="fas fa-sync-alt"></i><span>Recargar Datos</span>
+                        </button>
                     </div>
                 </div>
             </div>
@@ -609,6 +613,10 @@
                 <a href="#" class="mobile-nav-link" onclick="scrollToSection('productos'); toggleClientMobileNav(); return false;"><i class="fas fa-box-open"></i> Productos</a>
                 <a href="#" class="mobile-nav-link" onclick="openZelleRemittance(); toggleClientMobileNav(); return false;"><i class="fab fa-zelle"></i> Remesas Zelle</a>
                 <a href="#" class="mobile-nav-link" onclick="toggleCart(); toggleClientMobileNav(); return false;"><i class="fas fa-shopping-cart"></i> Mi Carrito<span id="cartCountMobile" style="margin-left: auto; background: var(--accent); color: white; font-size: 0.7rem; padding: 2px 8px; border-radius: 10px;">0</span></a>
+                <!-- Botón para forzar recarga en vista cliente -->
+                <a href="#" class="mobile-nav-link" onclick="forceReloadFromGitHub(); toggleClientMobileNav(); return false;" style="border-color: var(--warning); color: var(--warning);">
+                    <i class="fas fa-sync-alt"></i> Actualizar Catálogo
+                </a>
             </div>
         </div>
 
@@ -717,7 +725,16 @@
     </div>
 
     <script>
-        // ========== CONFIGURACIÓN ==========
+        // ========== CONFIGURACIÓN DE GITHUB ==========
+        const REPO_OWNER = 'costanorta-sys';
+        const REPO_NAME = 'tienda';
+        const DATA_FILE = 'data.json';
+        const GITHUB_BRANCH = 'main';
+        
+        // URL de jsDelivr para lectura pública
+        const GITHUB_DATA_URL = `https://cdn.jsdelivr.net/gh/${REPO_OWNER}/${REPO_NAME}@${GITHUB_BRANCH}/${DATA_FILE}`;
+
+        // ========== CONFIGURACIÓN GENERAL ==========
         const DB_KEY = 'futureshop_data';
         const AUTH_KEY = 'futureshop_auth';
         const THEME_KEY = 'futureshop_theme';
@@ -725,10 +742,6 @@
         let cart = [];
         let currentImageData = null;
         let currentFilter = 'all';
-
-        const REPO_OWNER = 'costanorta-sys';
-        const REPO_NAME = 'tienda';
-        const DATA_FILE = 'data.json';
 
         const defaultData = {
             products: [
@@ -784,21 +797,57 @@
             showToast('success','Exportado','Archivo data.json descargado. Súbelo a GitHub');
         }
 
-        async function loadDataFromGitHub() {
+        // ========== FUNCIÓN PRINCIPAL: CARGAR DESDE GITHUB ==========
+        async function loadDataFromGitHub(showToastMsg = true) {
             try {
-                const url = `https://cdn.jsdelivr.net/gh/${REPO_OWNER}/${REPO_NAME}@main/${DATA_FILE}`;
-                const response = await fetch(url);
+                // Agregar timestamp para evitar caché
+                const url = `${GITHUB_DATA_URL}?t=${Date.now()}`;
+                const response = await fetch(url, { cache: 'no-cache' });
+                
                 if (response.ok) {
                     const data = await response.json();
-                    if (data.products && data.products.length > 0 && data.settings) {
+                    // Validar que tenga la estructura esperada
+                    if (data.products && Array.isArray(data.products) && data.settings) {
                         localStorage.setItem(DB_KEY, JSON.stringify(data));
-                        showToast('success','Actualizado','Datos cargados desde GitHub');
+                        if (showToastMsg) {
+                            showToast('success','✅ Actualizado','Catálogo sincronizado desde GitHub');
+                        }
+                        console.log('✅ Datos cargados desde GitHub:', data.products.length, 'productos');
                         return true;
                     }
                 }
+                if (showToastMsg) {
+                    showToast('warning','⚠️ Sin conexión','Usando datos locales');
+                }
                 return false;
             } catch(e) {
+                console.warn('❌ Error cargando desde GitHub:', e);
+                if (showToastMsg) {
+                    showToast('warning','⚠️ Error','No se pudo conectar con GitHub');
+                }
                 return false;
+            }
+        }
+
+        // ========== FUNCIÓN PARA FORZAR RECARGA MANUAL ==========
+        async function forceReloadFromGitHub() {
+            showToast('info','🔄 Sincronizando','Cargando datos desde GitHub...');
+            const success = await loadDataFromGitHub(false);
+            if (success) {
+                // Actualizar vistas si están visibles
+                if (document.getElementById('adminView').classList.contains('visible')) {
+                    updateDashboard();
+                    renderProductsTable();
+                    updateCategoryDatalist();
+                }
+                if (document.getElementById('clientView').style.display !== 'none') {
+                    renderClientProducts();
+                    renderCategoryFilters();
+                    updateCart();
+                }
+                showToast('success','✅ Listo','Catálogo actualizado');
+            } else {
+                showToast('error','❌ Error','No se pudo cargar desde GitHub. Verifica tu conexión.');
             }
         }
 
@@ -831,7 +880,12 @@
         function hideAdminView() {
             document.getElementById('adminView').classList.remove('visible');
             document.getElementById('clientView').style.display = 'block';
-            loadDataFromGitHub().then(() => { renderClientProducts(); updateCart(); renderCategoryFilters(); });
+            // Forzar carga desde GitHub al cambiar a vista cliente
+            loadDataFromGitHub().then(() => { 
+                renderClientProducts(); 
+                updateCart(); 
+                renderCategoryFilters(); 
+            });
         }
         function logoutAdmin() { localStorage.removeItem(AUTH_KEY); hideAdminView(); showToast('success','Sesión cerrada','Has salido del panel admin'); }
         function viewStore() { hideAdminView(); scrollToSection('inicio'); }
@@ -915,11 +969,11 @@
                 return `<tr>
                     <td><div style="display:flex;align-items:center;gap:0.75rem;"><div class="product-thumb">${thumb}</div><div class="product-info-cell"><h4>${p.name}</h4><span>${p.category}</span></div></div></td>
                     <td>${p.category}</td>
-                    <td>${data.settings.currencySymbol}${p.price.toFixed(2)}</div></td>
+                    <td>${data.settings.currencySymbol}${p.price.toFixed(2)}</td>
                     <td><span class="badge ${p.active?'badge-success':'badge-danger'}">${p.active?'Activo':'Inactivo'}</span></td>
                     <td><div class="product-actions"><button class="btn btn-primary btn-sm" onclick="editProduct(${p.id})"><i class="fas fa-edit"></i></button>
                     <button class="btn btn-danger btn-sm" onclick="deleteProduct(${p.id})"><i class="fas fa-trash"></i></button></div></td>
-                </td>`;
+                </tr>`;
             }).join('');
         }
 
@@ -989,7 +1043,7 @@
             if(saveData(data)) {
                 closeProductModal(); renderProductsTable(); updateDashboard(); updateCategoryDatalist(); renderCategoryFilters();
                 if(document.getElementById('clientView').style.display !== 'none') renderClientProducts();
-                showToast('info','Respaldo','No olvides exportar a GitHub');
+                showToast('info','Respaldo','No olvides exportar y subir data.json a GitHub');
             }
         }
         function editProduct(id) { openProductModal(id); }
@@ -1064,7 +1118,6 @@
         function changeQty(id,delta) { const i = cart.find(x=>x.id===id); if(!i) return; i.quantity+=delta; if(i.quantity<=0) cart = cart.filter(x=>x.id!==id); updateCart(); }
         function removeFromCart(id) { cart = cart.filter(i=>i.id!==id); updateCart(); }
         
-        // Función para hacer scroll al footer del carrito
         function scrollCartToBottom() {
             const cartItems = document.querySelector('.cart-items');
             const cartFooter = document.querySelector('.cart-footer');
@@ -1075,19 +1128,16 @@
             }
         }
         
-        // Toggle del carrito mejorado con scroll automático
         function toggleCart() { 
             const sidebar = document.getElementById('cartSidebar');
             const overlay = document.getElementById('cartOverlay');
             sidebar.classList.toggle('active'); 
             overlay.classList.toggle('active');
-            
             if(sidebar.classList.contains('active')) {
                 scrollCartToBottom();
             }
         }
 
-        // ========== ENVÍO DE PEDIDO CON CÓDIGO DESTACADO Y BANDERAS ==========
         function sendWhatsAppOrder() {
             if(!cart.length) { showToast('warning','Vacío','Agrega productos'); return; }
             const nombre = document.getElementById('customerName').value.trim();
@@ -1114,13 +1164,28 @@
         }
 
         async function init() {
-            console.log("Iniciando FutureShop...");
+            console.log("🚀 Iniciando FutureShop...");
+            console.log("📦 Configuración GitHub:", { REPO_OWNER, REPO_NAME, DATA_FILE, GITHUB_BRANCH });
+            
             if(localStorage.getItem(THEME_KEY)==='light') { document.body.classList.add('light-mode'); updateThemeIcons(true); }
             if(!localStorage.getItem(DB_KEY)) localStorage.setItem(DB_KEY, JSON.stringify(defaultData));
-            await loadDataFromGitHub();
+            
+            // Intentar cargar desde GitHub al iniciar
+            await loadDataFromGitHub(false);
+            
             const auth = localStorage.getItem(AUTH_KEY);
-            if(auth) { try { const user = JSON.parse(auth); if(user.type==='admin') showAdminView(); } catch(e){ localStorage.removeItem(AUTH_KEY); } }
-            renderClientProducts(); updateCart(); renderCategoryFilters(); updateCategoryDatalist();
+            if(auth) { 
+                try { 
+                    const user = JSON.parse(auth); 
+                    if(user.type==='admin') showAdminView(); 
+                } catch(e){ localStorage.removeItem(AUTH_KEY); } 
+            }
+            
+            renderClientProducts(); 
+            updateCart(); 
+            renderCategoryFilters(); 
+            updateCategoryDatalist();
+            
             if(window.location.hash === '#admin') document.getElementById('authContainer').classList.remove('hidden');
         }
 
