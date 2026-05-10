@@ -169,13 +169,26 @@
         .footer { text-align: center; padding: 2rem 1rem; border-top: 1px solid var(--border-color); margin-top: 3rem; background: #fff; }
         .footer-logo { font-size: 1.3rem; font-weight: 800; color: var(--primary); margin-bottom: 0.5rem; }
 
+        /* ========== CARRITO OPTIMIZADO ========== */
         .cart-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0, 0, 0, 0.5); z-index: 2000; opacity: 0; visibility: hidden; transition: all 0.3s ease; }
         .cart-overlay.active { opacity: 1; visibility: visible; }
-        .cart-sidebar { position: fixed; top: 0; right: -100%; width: 100%; max-width: 420px; height: 100vh; background: var(--bg-card); border-left: 1px solid var(--border-color); z-index: 2001; transition: right 0.3s cubic-bezier(0.4, 0, 0.2, 1); display: flex; flex-direction: column; }
+        .cart-sidebar { 
+            position: fixed; top: 0; right: -100%; width: 100%; max-width: 420px; 
+            height: 100vh; height: 100dvh; /* Dynamic viewport height */
+            background: var(--bg-card); border-left: 1px solid var(--border-color); 
+            z-index: 2001; transition: right 0.3s cubic-bezier(0.4, 0, 0.2, 1); 
+            display: flex; flex-direction: column; 
+        }
         .cart-sidebar.active { right: 0; }
-        .cart-header { padding: 1.25rem 1.5rem; border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center; background: #fff; }
+        .cart-header { padding: 1.25rem 1.5rem; border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center; background: #fff; flex-shrink: 0; }
         .cart-header h3 { font-size: 1.1rem; font-weight: 700; }
-        .cart-items { flex: 1; overflow-y: auto; padding: 1rem 1.5rem; max-height: calc(100vh - 200px); }
+        
+        .cart-items { 
+            flex: 1; overflow-y: auto; padding: 1rem 1.5rem; 
+            -webkit-overflow-scrolling: touch; /* Smooth scroll iOS */
+            padding-bottom: 1rem;
+        }
+        
         .cart-item { display: flex; gap: 1rem; padding: 1rem; background: #f8fafc; border: 1px solid var(--border-color); border-radius: 14px; margin-bottom: 1rem; }
         .cart-item-image { width: 60px; height: 60px; border-radius: 10px; background: #f0f4f8; display: flex; align-items: center; justify-content: center; font-size: 1.8rem; overflow: hidden; }
         .cart-item-image img { width: 100%; height: 100%; object-fit: cover; }
@@ -185,14 +198,33 @@
         .cart-item-controls { display: flex; align-items: center; gap: 8px; margin-top: 8px; }
         .qty-btn { width: 28px; height: 28px; border-radius: 6px; border: 1px solid var(--border-color); background: #fff; color: var(--text-main); cursor: pointer; font-weight: 700; }
         .remove-item { background: none; border: none; color: var(--danger); cursor: pointer; font-size: 1.1rem; padding: 4px; }
-        .cart-footer { padding: 1.25rem 1.5rem; border-top: 1px solid var(--border-color); background: #fff; box-shadow: 0 -4px 15px rgba(0,0,0,0.05); }
+        
+        /* ✅ FOOTER FIJO Y SEGURO */
+        .cart-footer { 
+            padding: 1.25rem 1.5rem; 
+            border-top: 1px solid var(--border-color); 
+            background: #fff; 
+            flex-shrink: 0; /* No encoger */
+            padding-bottom: max(1.25rem, env(safe-area-inset-bottom)); /* Espacio para iPhone bar */
+            box-shadow: 0 -5px 20px rgba(0,0,0,0.05);
+            width: 100%;
+        }
+        
         .cart-total { display: flex; justify-content: space-between; font-size: 1.2rem; font-weight: 700; margin-bottom: 1rem; padding-bottom: 1rem; border-bottom: 1px solid var(--border-color); }
         .cart-total span:last-child { color: var(--success); }
         .cart-form { display: flex; flex-direction: column; gap: 0.75rem; margin-bottom: 1rem; }
         .whatsapp-input { width: 100%; padding: 14px 16px; background: var(--bg-input); border: 1px solid var(--border-color); border-radius: 12px; color: var(--text-main); font-size: 1rem; font-family: Arial, sans-serif; }
         .whatsapp-input:focus { outline: none; border-color: var(--success); box-shadow: 0 0 0 3px rgba(0,170,68,0.1); }
-        .btn-whatsapp-full { width: 100%; padding: 16px 24px; border-radius: 60px; font-size: 1.1rem; font-weight: 700; display: flex; align-items: center; justify-content: center; gap: 12px; border: none; cursor: pointer; text-transform: uppercase; background: var(--whatsapp); color: white; box-shadow: var(--glow-whatsapp); transition: all 0.2s; margin-bottom: 0.5rem; min-height: 56px; }
+        
+        /* ✅ BOTÓN GRANDE Y VISIBLE */
+        .btn-whatsapp-full { 
+            width: 100%; padding: 18px 24px; border-radius: 60px; font-size: 1.1rem; font-weight: 700; 
+            display: flex; align-items: center; justify-content: center; gap: 12px; border: none; cursor: pointer; 
+            text-transform: uppercase; background: var(--whatsapp); color: white; 
+            box-shadow: var(--glow-whatsapp); transition: all 0.2s; margin-bottom: 0.5rem; min-height: 60px; 
+        }
         .btn-whatsapp-full:active { transform: scale(0.97); }
+        
         .fab-whatsapp { position: fixed; bottom: 20px; right: 20px; width: 56px; height: 56px; border-radius: 50%; background: var(--whatsapp); color: white; border: none; cursor: pointer; font-size: 1.5rem; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 15px rgba(37, 211, 102, 0.4); z-index: 999; transition: all 0.2s; }
         .fab-whatsapp:hover { transform: scale(1.05); }
         .fab-whatsapp-count { position: absolute; top: -5px; right: -5px; background: var(--danger); color: white; font-size: 0.7rem; font-weight: 700; width: 22px; height: 22px; border-radius: 50%; display: flex; align-items: center; justify-content: center; }
@@ -251,11 +283,10 @@
             .products-grid { grid-template-columns: 1fr; padding: 0 1rem 1rem; }
             .categories-filter { top: 56px; padding: 0.6rem 0.75rem; gap: 6px; justify-content: flex-start; }
             .cat-btn { padding: 6px 14px; font-size: 0.85rem; }
-            .cart-footer { padding: 1rem !important; }
-            .btn-whatsapp-full { padding: 14px 20px !important; font-size: 1rem !important; margin-bottom: 0 !important; min-height: 54px; }
-            .cart-items { max-height: calc(100vh - 200px) !important; padding-bottom: 0.5rem; }
-            .cart-form .whatsapp-input { padding: 14px 16px; font-size: 16px; }
-            .fab-whatsapp { width: 50px; height: 50px; font-size: 1.4rem; bottom: 15px; right: 15px; }
+            
+            /* ✅ AJUSTES MÓVIL CARRITO */
+            .cart-sidebar { width: 100%; max-width: 100%; }
+            .btn-whatsapp-full { padding: 16px 20px !important; font-size: 1rem !important; min-height: 56px !important; }
             .lightbox-emoji { font-size: 5rem; }
             .product-image { height: 280px; }
         }
@@ -874,7 +905,7 @@
             localStorage.setItem(PEDIDOS_KEY, JSON.stringify(pedidos));
             
             // Mensaje limpio para WhatsApp (sin instrucciones)
-            let msg = `🔐 *CÓDIGO:* ${pedidoId}\n\n🛍️ *NUEVO PEDIDO - ${data.settings.storeName}*\n👤 ${nombre}\n📞 ${telefono}\n📍 ${direccion}\n\n💸 *Remesas Zelle* 🇨🇺 🇪🇸 🇺🇸\n¡Contáctanos!`;
+            let msg = `🔐 *CÓDIGO:* ${pedidoId}\n\n🛍️ *NUEVO PEDIDO - ${data.settings.storeName}*\n👤 ${nombre}\n📞 ${telefono}\n📍 ${direccion}\n\n💸 *Remesas Zelle* 🇨🇺 🇺🇸 🇪🇸\n¡Contáctanos!`;
             
             // Enviar correo si está configurado
             const emailCfg = JSON.parse(localStorage.getItem(EMAIL_KEY) || '{}');
